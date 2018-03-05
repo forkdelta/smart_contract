@@ -1,4 +1,4 @@
-pragma solidity ^0.4.9;
+pragma solidity ^0.4.11;
 
 contract SafeMath {
   function safeMul(uint a, uint b) internal returns (uint) {
@@ -203,6 +203,9 @@ contract ForkDelta is SafeMath {
     if (!Token(token).transfer(msg.sender, amount)) throw;
     Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
+
+  //support ERC223
+  function tokenFallback( address _origin, uint _value, bytes _data) public returns (bool ok){return true;}
 
   function balanceOf(address token, address user) constant returns (uint) {
     return tokens[token][user];

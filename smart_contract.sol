@@ -231,8 +231,16 @@ contract ForkDelta is SafeMath {
   }
 
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    uint feeMakeXfer = safeMul(amount, feeMake) / (1 ether);
-    uint feeTakeXfer = safeMul(amount, feeTake) / (1 ether);
+    
+    //trades are free until 05/01/2018 (in UNIX timestamp)
+    if (now < 1525132800) {
+      uint feeMakeXfer = 0;
+      uint feeTakeXfer = 0;
+    } else {
+      uint feeMakeXfer = safeMul(amount, feeMake) / (1 ether);
+      uint feeTakeXfer = safeMul(amount, feeTake) / (1 ether);
+    }
+    
     tokens[tokenGet][msg.sender] = safeSub(tokens[tokenGet][msg.sender], safeAdd(amount, feeTakeXfer));
     tokens[tokenGet][user] = safeAdd(tokens[tokenGet][user], safeSub(amount, feeMakeXfer));
     tokens[tokenGet][feeAccount] = safeAdd(tokens[tokenGet][feeAccount], safeAdd(feeMakeXfer, feeTakeXfer));

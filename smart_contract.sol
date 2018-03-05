@@ -19,7 +19,7 @@ contract SafeMath {
   }
 
   function assert(bool assertion) internal {
-    if (!assertion) throw;
+    if (!assertion) revert();
   }
 }
 
@@ -116,13 +116,13 @@ contract ReserveToken is StandardToken, SafeMath {
     minter = msg.sender;
   }
   function create(address account, uint amount) {
-    if (msg.sender != minter) throw;
+    if (msg.sender != minter) revert();
     balances[account] = safeAdd(balances[account], amount);
     totalSupply = safeAdd(totalSupply, amount);
   }
   function destroy(address account, uint amount) {
-    if (msg.sender != minter) throw;
-    if (balances[account] < amount) throw;
+    if (msg.sender != minter) revert();
+    if (balances[account] < amount) revert();
     balances[account] = safeSub(balances[account], amount);
     totalSupply = safeSub(totalSupply, amount);
   }
@@ -153,33 +153,33 @@ contract ForkDelta is SafeMath {
   }
 
   function() {
-    throw;
+    revert();
   }
 
   function changeAdmin(address admin_) {
-    if (msg.sender != admin) throw;
+    if (msg.sender != admin) revert();
     admin = admin_;
   }
 
   function changeFeeAccount(address feeAccount_) {
-    if (msg.sender != admin) throw;
+    if (msg.sender != admin) revert();
     feeAccount = feeAccount_;
   }
 
   function changeFeeMake(uint feeMake_) {
-    if (msg.sender != admin) throw;
-    if (feeMake_ > feeMake) throw;
+    if (msg.sender != admin) revert();
+    if (feeMake_ > feeMake) revert();
     feeMake = feeMake_;
   }
 
   function changeFeeTake(uint feeTake_) {
-    if (msg.sender != admin) throw;
-    if (feeTake_ > feeTake) throw;
+    if (msg.sender != admin) revert();
+    if (feeTake_ > feeTake) revert();
     feeTake = feeTake_;
   }
 
   function changeFreeUntilDate(uint freeUntilDate_) {
-    if (msg.sender != admin) throw;
+    if (msg.sender != admin) revert();
     freeUntilDate = freeUntilDate_;
   }
 
@@ -189,25 +189,25 @@ contract ForkDelta is SafeMath {
   }
 
   function withdraw(uint amount) {
-    if (tokens[0][msg.sender] < amount) throw;
+    if (tokens[0][msg.sender] < amount) revert();
     tokens[0][msg.sender] = safeSub(tokens[0][msg.sender], amount);
-    if (!msg.sender.call.value(amount)()) throw;
+    if (!msg.sender.call.value(amount)()) revert();
     Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
   function depositToken(address token, uint amount) {
     //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
-    if (token==0) throw;
-    if (!Token(token).transferFrom(msg.sender, this, amount)) throw;
+    if (token==0) revert();
+    if (!Token(token).transferFrom(msg.sender, this, amount)) revert();
     tokens[token][msg.sender] = safeAdd(tokens[token][msg.sender], amount);
     Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
   function withdrawToken(address token, uint amount) {
-    if (token==0) throw;
-    if (tokens[token][msg.sender] < amount) throw;
+    if (token==0) revert();
+    if (tokens[token][msg.sender] < amount) revert();
     tokens[token][msg.sender] = safeSub(tokens[token][msg.sender], amount);
-    if (!Token(token).transfer(msg.sender, amount)) throw;
+    if (!Token(token).transfer(msg.sender, amount)) revert();
     Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
@@ -231,7 +231,7 @@ contract ForkDelta is SafeMath {
       (orders[user][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
       block.number <= expires &&
       safeAdd(orderFills[user][hash], amount) <= amountGet
-    )) throw;
+    )) revert();
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = safeAdd(orderFills[user][hash], amount);
     Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
@@ -282,7 +282,7 @@ contract ForkDelta is SafeMath {
 
   function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    if (!(orders[msg.sender][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender)) throw;
+    if (!(orders[msg.sender][hash] || ecrecover(sha3("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender)) revert();
     orderFills[msg.sender][hash] = amountGet;
     Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }

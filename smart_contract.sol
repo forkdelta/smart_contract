@@ -133,6 +133,7 @@ contract ForkDelta is SafeMath {
   address public feeAccount; //the account that will receive fees
   uint public feeMake; //percentage times (1 ether)
   uint public feeTake; //percentage times (1 ether)
+  uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
   mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
   mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
   mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
@@ -143,11 +144,12 @@ contract ForkDelta is SafeMath {
   event Deposit(address token, address user, uint amount, uint balance);
   event Withdraw(address token, address user, uint amount, uint balance);
 
-  function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_) {
+  function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) {
     admin = admin_;
     feeAccount = feeAccount_;
     feeMake = feeMake_;
     feeTake = feeTake_;
+    freeUntilDate = freeUntilDate_;
   }
 
   function() {
@@ -174,6 +176,11 @@ contract ForkDelta is SafeMath {
     if (msg.sender != admin) throw;
     if (feeTake_ > feeTake) throw;
     feeTake = feeTake_;
+  }
+
+  function changeFreeUntilDate(uint freeUntilDate_) {
+    if (msg.sender != admin) throw;
+    freeUntilDate = freeUntilDate_;
   }
 
   function deposit() payable {
@@ -232,8 +239,8 @@ contract ForkDelta is SafeMath {
 
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
     
-    //trades are free until 05/01/2018 (in UNIX timestamp)
-    if (now < 1525132800) {
+    //trades are free until this date in UNIX timestamp
+    if (now < freeUntilDate) {
       uint feeMakeXfer = 0;
       uint feeTakeXfer = 0;
     } else {

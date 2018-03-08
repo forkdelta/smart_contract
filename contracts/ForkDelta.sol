@@ -71,7 +71,7 @@ contract ForkDelta {
   function withdraw(uint amount) public {
     require(tokens[0][msg.sender] >= amount);
     tokens[0][msg.sender] = tokens[0][msg.sender].sub(amount);
-    require(msg.sender.call.value(amount)());
+    msg.sender.transfer(amount)
     Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 

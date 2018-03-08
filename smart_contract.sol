@@ -64,6 +64,7 @@ contract ForkDelta is SafeMath {
   uint public feeMake; //percentage times (1 ether)
   uint public feeTake; //percentage times (1 ether)
   uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
+  bool private depositTokenMutex; //True when Token.transferFrom is being called from depositToken
   mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
   mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
   mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
@@ -86,6 +87,7 @@ contract ForkDelta is SafeMath {
     feeMake = feeMake_;
     feeTake = feeTake_;
     freeUntilDate = freeUntilDate_;
+    depositTokenMutex = false;
   }
 
   function() public {
@@ -126,25 +128,39 @@ contract ForkDelta is SafeMath {
     Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
+
   function depositToken(address token, uint amount) public {
     //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
     require(token!=0);
+    depositTokenMutex = true;
     require(Token(token).transferFrom(msg.sender, this, amount));
+    depositTokenMutex = false;
     tokens[token][msg.sender] = safeAdd(tokens[token][msg.sender], amount);
     Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
+  // Support ERC223 Token.transfer()
+  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok)  {
+      if (depositTokenMutex) {
+        // Transfer was initiated from depositToken(). User token balance will be updated there.
+        return true;
+      } else {
+        // Direct Token.transfer into this contract. Update user token balance
+        address token = msg.sender;
+        require(token!=0);
+        tokens[token][sender] = safeAdd(tokens[token][sender], amount);
+        Deposit(token, sender, amount, tokens[token][sender]);
+        return true;
+      }
+  }
+
+  
   function withdrawToken(address token, uint amount) public {
     require(token!=0);
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = safeSub(tokens[token][msg.sender], amount);
     require(Token(token).transfer(msg.sender, amount));
     Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
-  }
-
-  //support ERC223
-  function tokenFallback( address _origin, uint _value, bytes _data) public returns (bool ok) {
-      return true;
   }
 
   function balanceOf(address token, address user) public constant returns (uint) {

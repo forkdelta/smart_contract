@@ -1,8 +1,7 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.21;
 
 import "./Token.sol";
 import "./SafeMath.sol";
-
 
 contract ForkDelta {
   
@@ -65,14 +64,14 @@ contract ForkDelta {
 
   function deposit() public payable {
     tokens[0][msg.sender] = tokens[0][msg.sender].add(msg.value);
-    Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
+    emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
   }
 
   function withdraw(uint amount) public {
     require(tokens[0][msg.sender] >= amount);
     tokens[0][msg.sender] = tokens[0][msg.sender].sub(amount);
-    msg.sender.transfer(amount)
-    Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
+    msg.sender.transfer(amount);
+    emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
   function depositToken(address token, uint amount) public {
@@ -80,7 +79,7 @@ contract ForkDelta {
     require(token!=0);
     require(Token(token).transferFrom(msg.sender, this, amount));
     tokens[token][msg.sender] = tokens[token][msg.sender].add(amount);
-    Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
+    emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
   function withdrawToken(address token, uint amount) public {
@@ -88,7 +87,7 @@ contract ForkDelta {
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].sub(amount);
     require(Token(token).transfer(msg.sender, amount));
-    Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
+    emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
   //support ERC223
@@ -103,7 +102,7 @@ contract ForkDelta {
   function order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     orders[msg.sender][hash] = true;
-    Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
+    emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
   }
 
   function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) public {
@@ -116,7 +115,7 @@ contract ForkDelta {
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
+    emit Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
   }
 
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
@@ -141,7 +140,8 @@ contract ForkDelta {
     if (!(
       tokens[tokenGet][sender] >= amount &&
       availableVolume(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, user, v, r, s) >= amount
-    )) return false;
+    )) 
+      return false;
     return true;
   }
 
@@ -150,11 +150,14 @@ contract ForkDelta {
     if (!(
       (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
       block.number <= expires
-    )) return 0;
-    uint available1 = amountGet.sub(orderFills[user][hash]);
-    uint available2 = tokens[tokenGive][user].mul(amountGet) / amountGive;
-    if (available1<available2) return available1;
-    return available2;
+    )) 
+      return 0;
+    uint[2] memory available;
+    available[0] = amountGet.sub(orderFills[user][hash]);
+    available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
+    if (available[0]<available[1]) 
+      return available[0];
+    return available[1];
   }
 
   function amountFilled(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
@@ -166,6 +169,6 @@ contract ForkDelta {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender));
     orderFills[msg.sender][hash] = amountGet;
-    Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
+    emit Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }
 }

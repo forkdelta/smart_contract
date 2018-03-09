@@ -1,3 +1,5 @@
+pragma solidity ^0.4.21;
+
 contract Token {
   /// @return total amount of tokens
   function totalSupply() public constant returns (uint256 supply) {}

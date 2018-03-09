@@ -140,9 +140,11 @@ contract ForkDelta {
     if (!(
       tokens[tokenGet][sender] >= amount &&
       availableVolume(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, user, v, r, s) >= amount
-    )) 
+      )) { 
       return false;
-    return true;
+    } else {
+      return true;
+    }
   }
 
   function availableVolume(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
@@ -150,14 +152,17 @@ contract ForkDelta {
     if (!(
       (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
       block.number <= expires
-    )) 
+      )) {
       return 0;
+    }
     uint[2] memory available;
     available[0] = amountGet.sub(orderFills[user][hash]);
     available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
-    if (available[0]<available[1]) 
+    if (available[0]<available[1]) {
       return available[0];
-    return available[1];
+    } else {
+      return available[1];
+    }
   }
 
   function amountFilled(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {

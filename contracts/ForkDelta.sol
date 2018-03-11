@@ -132,7 +132,6 @@ contract ForkDelta {
     tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
     tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.sub(feeTakeXfer));
     tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount) / amountGet);
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount) / amountGet);
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount) / amountGet);
   }
 

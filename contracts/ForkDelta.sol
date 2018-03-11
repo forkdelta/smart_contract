@@ -130,7 +130,7 @@ contract ForkDelta {
     
     tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
     tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
-    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.sub(feeTakeXfer));
+    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
     tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount) / amountGet);
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount) / amountGet);
   }
@@ -157,7 +157,7 @@ contract ForkDelta {
     uint[2] memory available;
     available[0] = amountGet.sub(orderFills[user][hash]);
     available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
-    if (available[0]<available[1]) {
+    if (available[0] < available[1]) {
       return available[0];
     } else {
       return available[1];

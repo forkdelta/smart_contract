@@ -145,11 +145,9 @@ contract ForkDelta is SafeMath {
         // Transfer was initiated from depositToken(). User token balance will be updated there.
         return true;
       } else {
-        // Direct Token.transfer into this contract. Update user token balance
-        address token = msg.sender;
-        tokens[token][sender] = safeAdd(tokens[token][sender], amount);
-        Deposit(token, sender, amount, tokens[token][sender]);
-        return true;
+        // Direct ECR223 Token.transfer into this contract not allowed, to keep it consistent
+        // with direct transfers of ECR20 and ETH.
+        revert();
       }
   }
 

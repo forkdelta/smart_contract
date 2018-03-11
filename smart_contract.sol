@@ -128,7 +128,6 @@ contract ForkDelta is SafeMath {
     Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
-
   function depositToken(address token, uint amount) public {
     //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
     require(token!=0);

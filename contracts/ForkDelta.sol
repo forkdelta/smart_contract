@@ -23,7 +23,6 @@ contract ForkDelta {
   event Deposit(address token, address user, uint amount, uint balance);
   event Withdraw(address token, address user, uint amount, uint balance);
 
-
   modifier isAdmin() {
       require(msg.sender == admin);
       _;
@@ -97,7 +96,6 @@ contract ForkDelta {
         revert();
       }
   }
-
   
   function withdrawToken(address token, uint amount) public {
     require(token!=0);
@@ -127,24 +125,23 @@ contract ForkDelta {
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    emit Trade(tokenGet, amount, tokenGive, amountGive * amount / amountGet, user, msg.sender);
+    emit Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
   }
 
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    
     //trades are free until this date in UNIX timestamp
     uint feeMakeXfer = 0;
     uint feeTakeXfer = 0;
     if (now >= freeUntilDate) {
-      feeMakeXfer = amount.mul(feeMake) / (1 ether);
-      feeTakeXfer = amount.mul(feeTake) / (1 ether);
+      feeMakeXfer = amount.mul(feeMake).div(1 ether);
+      feeTakeXfer = amount.mul(feeTake).div(1 ether);
     }
     
     tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
     tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
     tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount) / amountGet);
-    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount) / amountGet);
+    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet);
+    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 
   function testTrade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount, address sender) public constant returns(bool) {
@@ -168,7 +165,7 @@ contract ForkDelta {
     }
     uint[2] memory available;
     available[0] = amountGet.sub(orderFills[user][hash]);
-    available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
+    available[1] = tokens[tokenGive][user].mul(amountGet).div(amountGive);
     if (available[0] < available[1]) {
       return available[0];
     } else {

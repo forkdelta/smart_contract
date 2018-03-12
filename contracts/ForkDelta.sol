@@ -12,6 +12,7 @@ contract ForkDelta {
   uint public feeMake; //percentage times (1 ether)
   uint public feeTake; //percentage times (1 ether)
   uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
+  bool private depositingTokenFlag; //True when Token.transferFrom is being called from depositToken
   mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
   mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
   mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
@@ -34,6 +35,7 @@ contract ForkDelta {
     feeMake = feeMake_;
     feeTake = feeTake_;
     freeUntilDate = freeUntilDate_;
+    depositingTokenFlag = false;
   }
 
   function() public {
@@ -77,22 +79,32 @@ contract ForkDelta {
   function depositToken(address token, uint amount) public {
     //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
     require(token!=0);
+    depositingTokenFlag = true;
     require(Token(token).transferFrom(msg.sender, this, amount));
+    depositingTokenFlag = false;
     tokens[token][msg.sender] = tokens[token][msg.sender].add(amount);
     emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
+ }
+
+  // Support ERC223 Token.transfer()
+  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok)  {
+      if (depositingTokenFlag) {
+        // Transfer was initiated from depositToken(). User token balance will be updated there.
+        return true;
+      } else {
+        // Direct ECR223 Token.transfer into this contract not allowed, to keep it consistent
+        // with direct transfers of ECR20 and ETH.
+        revert();
+      }
   }
 
+  
   function withdrawToken(address token, uint amount) public {
     require(token!=0);
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].sub(amount);
     require(Token(token).transfer(msg.sender, amount));
     emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
-  }
-
-  //support ERC223
-  function tokenFallback( address _origin, uint _value, bytes _data) public returns (bool ok) {
-      return true;
   }
 
   function balanceOf(address token, address user) public constant returns (uint) {

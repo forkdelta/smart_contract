@@ -110,3 +110,5 @@ ENV/
 #misc
 .pydevproject
 .project
+package-lock.json
+/node_modules

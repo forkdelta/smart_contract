@@ -33,7 +33,7 @@ contract ForkDelta {
       _;
   }
 
-  /// Initialization function. This is only called on contract creation.
+  /// Constructor function. This is only called on contract creation.
   function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) public {
     admin = admin_;
     feeAccount = feeAccount_;
@@ -43,7 +43,7 @@ contract ForkDelta {
     depositingTokenFlag = false;
   }
 
-  /// This default function prevents people sending Ether directly into the contract.
+  /// The fallback function. Ether transfered into the contract is not accepted.
   function() public {
     revert();
   }
@@ -76,9 +76,9 @@ contract ForkDelta {
   }
 
   /**
-  * Note: With the payable modifier, this function accepts Ether.
   * This function handles deposits of Ether into the contract.
   * Emits a Deposit event.
+  * Note: With the payable modifier, this function accepts Ether.
   */
   function deposit() public payable {
     tokens[0][msg.sender] = tokens[0][msg.sender].add(msg.value);
@@ -99,12 +99,12 @@ contract ForkDelta {
   }
 
   /**
-  * IMPORTANT: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
   * This function handles deposits of Ethereum based tokens to the contract.
   * Does not allow Ether.
   * If token transfer fails, transaction is reverted and remaining gas is refunded.
   * Emits a Deposit event.
-  * @param token Ethereum contract address of the token 
+  * Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
+  * @param token Ethereum contract address of the token or 0 for Ether
   * @param amount uint of the amount of the token the user wishes to deposit
   */
   function depositToken(address token, uint amount) public {
@@ -140,7 +140,7 @@ contract ForkDelta {
   * Does not allow Ether.
   * If token transfer fails, transaction is reverted and remaining gas is refunded.
   * Emits a Withdraw event.
-  * @param token Ethereum contract address of the token 
+  * @param token Ethereum contract address of the token or 0 for Ether
   * @param amount uint of the amount of the token the user wishes to withdraw
   */
   function withdrawToken(address token, uint amount) public {
@@ -153,7 +153,7 @@ contract ForkDelta {
 
   /**
   * Retrieves the balance of a token based on a user address and token address.
-  * @param token Ethereum contract address of the token 
+  * @param token Ethereum contract address of the token or 0 for Ether
   * @param user Ethereum address of the user
   * @return the amount of tokens on the exchange for a given user address
   */
@@ -162,9 +162,9 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * Stores the active order inside of the contract.
   * Emits an Order event.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -179,13 +179,13 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
-  * Note: amount is in amountGet / tokenGet terms.
   * Facilitates a trade from one user to another.
   * Requires that the transaction is signed properly, the trade isn't past its expiration, and all funds are present to fill the trade.
   * Calls tradeBalances().
   * Updates orderFills with the amount traded.
   * Emits a Trade event.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -211,12 +211,12 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
-  * Note: amount is in amountGet / tokenGet terms.
-  * This is a private function and can only be called from trade().
+  * This is a private function and is only being called from trade().
   * Handles the movement of funds when a trade occurs.
   * Takes fees.
-  * Updates token balances for both sender and receiver
+  * Updates token balances for both buyer and seller.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -242,9 +242,9 @@ contract ForkDelta {
   }
 
   /**
+  * This function is to test if a trade would go through.
   * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * Note: amount is in amountGet / tokenGet terms.
-  * This function is to test if a trade would go through.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -271,8 +271,8 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * This function checks the available volume for a given order.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -304,8 +304,8 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * This function checks the amount of an order that has already been filled.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give
@@ -324,11 +324,11 @@ contract ForkDelta {
   }
 
   /**
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * This function cancels a given order by editing its fill data to the full amount.
   * Requires that the transaction is signed properly.
   * Updates orderFills to the full amountGet
   * Emits a Cancel event.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
   * @param tokenGet Ethereum contract address of the token to receive
   * @param amountGet uint amount of tokens being received
   * @param tokenGive Ethereum contract address of the token to give

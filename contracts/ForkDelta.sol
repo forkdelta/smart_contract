@@ -3,6 +3,10 @@ pragma solidity ^0.4.21;
 import "./Token.sol";
 import "./SafeMath.sol";
 
+/**
+ * @title ForkDelta
+ * @dev This is the main contract for the ForkDelta exchange.
+ */
 contract ForkDelta {
   
   using SafeMath for uint;
@@ -23,11 +27,13 @@ contract ForkDelta {
   event Deposit(address token, address user, uint amount, uint balance);
   event Withdraw(address token, address user, uint amount, uint balance);
 
+  /// This is a modifier for functions to check if the sending user address is the same as the admin user address.
   modifier isAdmin() {
       require(msg.sender == admin);
       _;
   }
 
+  /// Initialization function. This is only called on contract creation.
   function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) public {
     admin = admin_;
     feeAccount = feeAccount_;
@@ -37,37 +43,54 @@ contract ForkDelta {
     depositingTokenFlag = false;
   }
 
+  /// This default function prevents people sending Ether directly into the contract.
   function() public {
     revert();
   }
 
+  /// Changes the official admin user address. Accepts Ethereum address.
   function changeAdmin(address admin_) public isAdmin {
     admin = admin_;
   }
 
+  /// Changes the account address that receives trading fees. Accepts Ethereum address.
   function changeFeeAccount(address feeAccount_) public isAdmin {
     feeAccount = feeAccount_;
   }
 
+  /// Changes the fee on makes. Can only be changed to a value less than it is currently set at.
   function changeFeeMake(uint feeMake_) public isAdmin {
     require (feeMake_ <= feeMake);
     feeMake = feeMake_;
   }
 
+  /// Changes the fee on takes. Can only be changed to a value less than it is currently set at.
   function changeFeeTake(uint feeTake_) public isAdmin {
     require(feeTake_ <= feeTake);
     feeTake = feeTake_;
   }
 
+  /// Changes the date that trades are free until. Accepts UNIX timestamp.
   function changeFreeUntilDate(uint freeUntilDate_) public isAdmin {
     freeUntilDate = freeUntilDate_;
   }
 
+  /**
+  * Note: With the payable modifier, this function accepts Ether.
+  * This function handles deposits of Ether into the contract.
+  * Emits a Deposit event.
+  */
   function deposit() public payable {
     tokens[0][msg.sender] = tokens[0][msg.sender].add(msg.value);
     emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
   }
 
+  /**
+  * This function handles withdrawals of Ether from the contract.
+  * Verifies that the user has enough funds to cover the withdrawal.
+  * Emits a Withdraw event.
+  * @param amount: uint of the amount of Ether the user wishes to withdraw
+  */
   function withdraw(uint amount) public {
     require(tokens[0][msg.sender] >= amount);
     tokens[0][msg.sender] = tokens[0][msg.sender].sub(amount);
@@ -75,8 +98,16 @@ contract ForkDelta {
     emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
+  /**
+  * IMPORTANT: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
+  * This function handles deposits of Ethereum based tokens to the contract.
+  * Does not allow Ether.
+  * If token transfer fails, transaction is reverted and remaining gas is refunded.
+  * Emits a Deposit event.
+  * @param token Ethereum contract address of the token 
+  * @param amount uint of the amount of the token the user wishes to deposit
+  */
   function depositToken(address token, uint amount) public {
-    //remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
     require(token!=0);
     depositingTokenFlag = true;
     require(Token(token).transferFrom(msg.sender, this, amount));
@@ -85,7 +116,14 @@ contract ForkDelta {
     emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
  }
 
-  // Support ERC223 Token.transfer()
+  /**
+  * This function provides a fallback solution as outlined in ERC223.
+  * If tokens are deposited through depositToken(), the transaction will continue.
+  * If tokens are sent directly to this contract, the transaction is reverted.
+  * @param sender Ethereum address of the sender of the token
+  * @param amount amount of the incoming tokens
+  * @param data attached data similar to msg.data of Ether transactions
+  */
   function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok)  {
       if (depositingTokenFlag) {
         // Transfer was initiated from depositToken(). User token balance will be updated there.
@@ -97,6 +135,14 @@ contract ForkDelta {
       }
   }
   
+  /**
+  * This function handles withdrawals of Ethereum based tokens from the contract.
+  * Does not allow Ether.
+  * If token transfer fails, transaction is reverted and remaining gas is refunded.
+  * Emits a Withdraw event.
+  * @param token Ethereum contract address of the token 
+  * @param amount uint of the amount of the token the user wishes to withdraw
+  */
   function withdrawToken(address token, uint amount) public {
     require(token!=0);
     require(tokens[token][msg.sender] >= amount);
@@ -105,18 +151,54 @@ contract ForkDelta {
     emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
+  /**
+  * Retrieves the balance of a token based on a user address and token address.
+  * @param token Ethereum contract address of the token 
+  * @param user Ethereum address of the user
+  * @return the amount of tokens on the exchange for a given user address
+  */
   function balanceOf(address token, address user) public constant returns (uint) {
     return tokens[token][user];
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Stores the active order inside of the contract.
+  * Emits an Order event.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  */
   function order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     orders[msg.sender][hash] = true;
     emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * Facilitates a trade from one user to another.
+  * Requires that the transaction is signed properly, the trade isn't past its expiration, and all funds are present to fill the trade.
+  * Calls tradeBalances().
+  * Updates orderFills with the amount traded.
+  * Emits a Trade event.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  * @param user Ethereum address of the user who placed the order
+  * @param v part of signature for the order hash as signed by user
+  * @param r part of signature for the order hash as signed by user
+  * @param s part of signature for the order hash as signed by user
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  */
   function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) public {
-    //amount is in amountGet terms
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     require((
       (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
@@ -128,10 +210,25 @@ contract ForkDelta {
     emit Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * This is a private function and can only be called from trade().
+  * Handles the movement of funds when a trade occurs.
+  * Takes fees.
+  * Updates token balances for both sender and receiver
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param user Ethereum address of the user who placed the order
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  */
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    //trades are free until this date in UNIX timestamp
+    
     uint feeMakeXfer = 0;
     uint feeTakeXfer = 0;
+    
     if (now >= freeUntilDate) {
       feeMakeXfer = amount.mul(feeMake).div(1 ether);
       feeTakeXfer = amount.mul(feeTake).div(1 ether);
@@ -144,6 +241,24 @@ contract ForkDelta {
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * This function is to test if a trade would go through.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  * @param user Ethereum address of the user who placed the order
+  * @param v part of signature for the order hash as signed by user
+  * @param r part of signature for the order hash as signed by user
+  * @param s part of signature for the order hash as signed by user
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  * @param sender Ethereum address of the user taking the order
+  * @return bool: true if the trade would be successful, false otherwise
+  */
   function testTrade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount, address sender) public constant returns(bool) {
     if (!(
       tokens[tokenGet][sender] >= amount &&
@@ -155,6 +270,21 @@ contract ForkDelta {
     }
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * This function checks the available volume for a given order.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  * @param user Ethereum address of the user who placed the order
+  * @param v part of signature for the order hash as signed by user
+  * @param r part of signature for the order hash as signed by user
+  * @param s part of signature for the order hash as signed by user
+  * @return uint: amount of volume available for the given order in terms of amountGet / tokenGet
+  */
   function availableVolume(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     if (!(
@@ -173,11 +303,44 @@ contract ForkDelta {
     }
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * This function checks the amount of an order that has already been filled.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  * @param user Ethereum address of the user who placed the order
+  * @param v part of signature for the order hash as signed by user
+  * @param r part of signature for the order hash as signed by user
+  * @param s part of signature for the order hash as signed by user
+  * @return uint: amount of the given order that has already been filled in terms of amountGet / tokenGet
+  */
   function amountFilled(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     return orderFills[user][hash];
   }
 
+  /**
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * This function cancels a given order by editing its fill data to the full amount.
+  * Requires that the transaction is signed properly.
+  * Updates orderFills to the full amountGet
+  * Emits a Cancel event.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param expires uint of block number when this order should expire
+  * @param nonce arbitrary random number
+  * @param user Ethereum address of the user who placed the order
+  * @param v part of signature for the order hash as signed by user
+  * @param r part of signature for the order hash as signed by user
+  * @param s part of signature for the order hash as signed by user
+  * @return uint: amount of the given order that has already been filled in terms of amountGet / tokenGet
+  */
   function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender));

@@ -1,5 +1,9 @@
 pragma solidity ^0.4.21;
 
+/**
+ * @title Token
+ * @dev Token functionality necessary for working with tokens within the exchange contract.
+ */
 contract Token {
   /// @return total amount of tokens
   function totalSupply() public constant returns (uint256 supply) {}

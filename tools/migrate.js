@@ -1,10 +1,10 @@
 //npm install web3
-//npm install --save bn.js
+//npm install --save bignumber.js
 //npm install socket.io
 
 //requirements
 var Web3 = require('web3');
-const BN = require('bn.js');
+const BN = require('bignumber.js');
 const io = require('socket.io-client');
 
 //settings
@@ -38,7 +38,7 @@ var orders = {
 function get_balances(user, tokens) {	
 	tokens.forEach(function(token_address){
         var big_number = ED.balanceOf(token_address, user)['c']; //grab balance from ED contract
-        big_number = parseInt(big_number.join('')); // If balances return a split integer, join it into single value
+        big_number = new BN(big_number.join('')); // If balances return a split integer, join it into single value
         
         if (big_number.length > 1) {
         	var token_decimals = get_token_decimals(token_address);
@@ -89,7 +89,7 @@ get_orders(user_address, tokens_short);
 //--- utils ---
 /* Converts the big number stored in eth contracts to its user-friendly decimal equivalent */
 function big_number_to_decimal(big_number, token_decimals) {
-    return big_number / Math.pow(10, token_decimals);
+    return big_number.dividedBy(Math.pow(10, token_decimals));
 }
 
 //gets the token decimals from contract ABI

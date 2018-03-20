@@ -107,6 +107,10 @@ ENV/
 # mypy
 .mypy_cache/
 
+# node
+node_modules/
+package-lock.json
+
 #misc
 .pydevproject
 .project

@@ -309,7 +309,7 @@ Note: tokenGet & tokenGive can be the Ethereum contract address.
 @param s part of signature for the order hash as signed by user  
 @return uint: amount of the given order that has already been filled in terms of amountGet / tokenGet  
 
-#### `function migrateFunds(address newContract, address[] tokens_)`
+#### `function migrateFunds(address newContract, address[] tokens_) public`
 User triggered function to migrate funds into a new contract to ease updates.
 Emits a FundsMigrated event.
 @param address Contract address of the new contract we are migrating funds to

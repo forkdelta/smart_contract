@@ -88,9 +88,6 @@ The administrator's Ethereum address
 __feeAccount__ `address public feeAccount`  
 The Ethereum address that fees will be sent to
 
-__feeMake__ `uint public feeMake`  
-The amount (in ether) that will be taken as a fee on makes
-
 __feeTake__ `uint public feeTake`  
 The amount (in ether) that will be taken as a fee on takes
 
@@ -124,7 +121,7 @@ This is a modifier for functions to check if the sending user address is the sam
 
 #### `ForkDelta` Functions
 
-#### `function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) public`
+#### `function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_) public`
 Constructor function. This is only called on contract creation.
 
 #### `function() public`
@@ -135,9 +132,6 @@ Changes the official admin user address. Accepts Ethereum address.
 
 #### `function changeFeeAccount(address feeAccount_) public isAdmin`
 Changes the account address that receives trading fees. Accepts Ethereum address.
-
-#### `function changeFeeMake(uint feeMake_) public isAdmin`
-Changes the fee on makes. Can only be changed to a value less than it is currently set at.
 
 #### `function changeFeeTake(uint feeTake_) public isAdmin`
 Changes the fee on takes. Can only be changed to a value less than it is currently set at.

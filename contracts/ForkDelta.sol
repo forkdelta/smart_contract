@@ -13,7 +13,6 @@ contract ForkDelta {
 
   address public admin; //the admin address
   address public feeAccount; //the account that will receive fees
-  uint public feeMake; //percentage times (1 ether)
   uint public feeTake; //percentage times (1 ether)
   uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
   bool private depositingTokenFlag; //True when Token.transferFrom is being called from depositToken
@@ -34,10 +33,9 @@ contract ForkDelta {
   }
 
   /// Constructor function. This is only called on contract creation.
-  function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) public {
+  function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_) public {
     admin = admin_;
     feeAccount = feeAccount_;
-    feeMake = feeMake_;
     feeTake = feeTake_;
     freeUntilDate = freeUntilDate_;
     depositingTokenFlag = false;
@@ -56,12 +54,6 @@ contract ForkDelta {
   /// Changes the account address that receives trading fees. Accepts Ethereum address.
   function changeFeeAccount(address feeAccount_) public isAdmin {
     feeAccount = feeAccount_;
-  }
-
-  /// Changes the fee on makes. Can only be changed to a value less than it is currently set at.
-  function changeFeeMake(uint feeMake_) public isAdmin {
-    require (feeMake_ <= feeMake);
-    feeMake = feeMake_;
   }
 
   /// Changes the fee on takes. Can only be changed to a value less than it is currently set at.
@@ -226,17 +218,15 @@ contract ForkDelta {
   */
   function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
     
-    uint feeMakeXfer = 0;
     uint feeTakeXfer = 0;
     
     if (now >= freeUntilDate) {
-      feeMakeXfer = amount.mul(feeMake).div(1 ether);
       feeTakeXfer = amount.mul(feeTake).div(1 ether);
     }
     
     tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
-    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
-    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
+    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount);
+    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeTakeXfer);
     tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet);
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }

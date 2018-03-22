@@ -21,11 +21,13 @@ contract ForkDelta {
   mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
   mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
 
-  event Order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user);
-  event Cancel(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s);
-  event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address get, address give);
-  event Deposit(address token, address user, uint amount, uint balance);
-  event Withdraw(address token, address user, uint amount, uint balance);
+  /// Logging Events
+  event Order(address indexed tokenGet, uint amountGet, address indexed tokenGive, uint amountGive, uint indexed expires, uint nonce, address user);
+  event Cancel(address indexed tokenGet, uint amountGet, address indexed tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s);
+  event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address indexed get, address indexed give);
+  event Deposit(address indexed token, indexed address user, indexed uint amount, uint balance);
+  event Withdraw(address indexed token, address indexed user, uint indexed amount, uint balance);
+  event FundsMigrated(address indexed user, address indexed newContract);
 
   /// This is a modifier for functions to check if the sending user address is the same as the admin user address.
   modifier isAdmin() {

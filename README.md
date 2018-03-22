@@ -127,7 +127,6 @@ The version # of the contract
 ##### `event Withdraw(address token, address user, uint amount, uint balance);`
 ##### `event FundsMigrated(address user, address newContract);`
 
-
 #### `ForkDelta` Modifiers
 
 #### `modifier isAdmin()`

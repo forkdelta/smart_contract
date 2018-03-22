@@ -81,6 +81,11 @@ contract ForkDelta {
     freeUntilDate = freeUntilDate_;
   }
   
+  /// Updates the contract by setting a successor.
+  function updateContract(address successor_) public isAdmin {
+    successor = successor_;
+  }
+  
   ////////////////////////////////////////////////////////////////////////////////
   // Deposits, Withdrawals, Balances
   ////////////////////////////////////////////////////////////////////////////////

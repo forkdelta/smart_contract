@@ -380,11 +380,11 @@ contract ForkDelta {
   * @param address Contract address of the new contract we are migrating funds to
   * @param address[] Array of token addresses that we will be migrating to the new contract
   */
-  function migrateFunds(address newContract, address[] tokens_) {
+  function migrateFunds(address newContract, address[] tokens_) public {
   
     require(newContract != address(0));
     
-    ForkDelta newExchange = ForkDelta(successor);
+    ForkDelta newExchange = ForkDelta(newContract);
 
     // Move Ether into new exchange.
     uint etherAmount = tokens[0][msg.sender];
@@ -429,9 +429,8 @@ contract ForkDelta {
   * Does not allow Ether.
   * If token transfer fails, transaction is reverted and remaining gas is refunded.
   * Note: This is intended for use in migration of funds.
-  * Note: With the payable modifier, this function accepts Ether.
   * Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
-  * @param token Ethereum contract address of the token or 0 for Ether
+  * @param token Ethereum contract address of the token
   * @param amount uint of the amount of the token the user wishes to deposit
   */
   function depositTokenForUser(address token, uint amount, address user) public {

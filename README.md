@@ -1,6 +1,6 @@
 # ForkDelta's Smart Contract
 
-This is the official repository for all things regarding the ForkDela smart contract.
+This is the official repository for all things regarding the ForkDela smart contract.  
 All contracts are located in the `contracts` folder.
 
 ## Summary
@@ -31,8 +31,8 @@ This is the token interface necessary for working with tokens within the exchang
 
 #### `Token` Variables
 
-decimals `uint public decimals`
-name `string public name`
+decimals `uint public decimals`  
+name `string public name`  
 
 #### `Token` Events
 
@@ -82,31 +82,31 @@ This contract uses the SafeMath library for uint variables.
 
 #### `ForkDelta` Variables
 
-__admin__ `address public admin`
+__admin__ `address public admin`  
 The administrator's Ethereum address
 
-__feeAccount__ `address public feeAccount`
+__feeAccount__ `address public feeAccount`  
 The Ethereum address that fees will be sent to
 
-__feeMake__ `uint public feeMake`
+__feeMake__ `uint public feeMake`  
 The amount (in ether) that will be taken as a fee on makes
 
-__feeTake__ `uint public feeTake`
+__feeTake__ `uint public feeTake`  
 The amount (in ether) that will be taken as a fee on takes
 
-__freeUntilDate__ `uint public freeUntilDate`
+__freeUntilDate__ `uint public freeUntilDate`  
 The date in UNIX timestamp that trades will be free until
 
-__depositingTokenFlag__ `bool private depositingTokenFlag`
+__depositingTokenFlag__ `bool private depositingTokenFlag`  
 True when Token.transferFrom is being called from depositToken
 
-__tokens__ `mapping (address => mapping (address => uint)) public tokens`
+__tokens__ `mapping (address => mapping (address => uint)) public tokens`  
 The mapping of token addresses to mapping of account balances (token=0 means Ether)
 
-__orders__ `mapping (address => mapping (bytes32 => bool)) public orders`
+__orders__ `mapping (address => mapping (bytes32 => bool)) public orders`  
 The mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
 
-__orderFills__ `mapping (address => mapping (bytes32 => uint)) public orderFills;`
+__orderFills__ `mapping (address => mapping (bytes32 => uint)) public orderFills;`  
 The mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
 
 #### `ForkDelta` Events
@@ -116,7 +116,6 @@ The mapping of user accounts to mapping of order hashes to uints (amount of orde
 ##### `event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address get, address give);`
 ##### `event Deposit(address token, address user, uint amount, uint balance);`
 ##### `event Withdraw(address token, address user, uint amount, uint balance);`
-
 
 #### `ForkDelta` Modifiers
 

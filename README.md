@@ -134,7 +134,7 @@ This is a modifier for functions to check if the sending user address is the sam
 
 #### `ForkDelta` Functions
 
-#### `function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_, address predecessor_) public`
+#### `function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_, address predecessor_) public`
 Constructor function. This is only called on contract creation.
 
 #### `function() public`

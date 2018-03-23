@@ -6,12 +6,12 @@ All contracts are located in the `contracts` folder.
 ## Summary
 - [Development](#development)
 - [Libraries](#libraries)
-  - [LSafeMath](#library-safemath)
+  - [LSafeMath](#library-lsafemath)
 - [Contracts](#contracts)
-  - [IToken](#contract-token)
-    - [Variables](#token-variables)
-    - [Events](#token-events)
-    - [Functions](#token-functions)
+  - [IToken](#contract-itoken)
+    - [Variables](#itoken-variables)
+    - [Events](#itoken-events)
+    - [Functions](#itoken-functions)
   - [ForkDelta](#contract-forkdelta)
     - [Variables](#forkdelta-variables)
     - [Events](#forkdelta-events)
@@ -41,13 +41,13 @@ Setup:
 * Migrate: `truffle migrate`
 * Run test cases: `truffle test`
 
-### Migrate and test with truffle develop
+### Migrating and testing with truffle develop
 * `truffle develop`
 * Compile: `compile`
 * Migrate: `migrate`
 * Run test cases: `test`
 
-### Migrate to the live/production chain
+### Migrating to the live/production chain
 * Edit "live" section in `truffle.js`:
 * Set reasonable gas price based on https://ethgasstation.info
 * Start local ethereum node (geth/parity) and set connection parameters in `truffle.js` 

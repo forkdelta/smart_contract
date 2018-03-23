@@ -105,7 +105,7 @@ contract ForkDelta {
   * This function handles withdrawals of Ether from the contract.
   * Verifies that the user has enough funds to cover the withdrawal.
   * Emits a Withdraw event.
-  * @param amount: uint of the amount of Ether the user wishes to withdraw
+  * @param amount uint of the amount of Ether the user wishes to withdraw
   */
   function withdraw(uint amount) public {
     require(tokens[0][msg.sender] >= amount);
@@ -255,7 +255,7 @@ contract ForkDelta {
     tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
     tokens[tokenGet][user] = tokens[tokenGet][user].add(amount);
     tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeTakeXfer);
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet);
+    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 
@@ -407,10 +407,10 @@ contract ForkDelta {
   
   /**
   * This function handles deposits of Ether into the contract, but allows specification of a user.
-  * Note: This is intended for use in migration of funds.
+  * Note: This is generally used in migration of funds.
   * Note: With the payable modifier, this function accepts Ether.
   */
-  function depositForUser(address user) private payable {
+  function depositForUser(address user) public payable {
     require(user != address(0));
     require(msg.value > 0);
     tokens[0][user] = tokens[0][user].add(msg.value);
@@ -420,12 +420,12 @@ contract ForkDelta {
   * This function handles deposits of Ethereum based tokens into the contract, but allows specification of a user.
   * Does not allow Ether.
   * If token transfer fails, transaction is reverted and remaining gas is refunded.
-  * Note: This is intended for use in migration of funds.
+  * Note: This is generally used in migration of funds.
   * Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
   * @param token Ethereum contract address of the token
   * @param amount uint of the amount of the token the user wishes to deposit
   */
-  function depositTokenForUser(address token, uint amount, address user) private {
+  function depositTokenForUser(address token, uint amount, address user) public {
     require(token != address(0));
     require(user != address(0));
     require(amount > 0);

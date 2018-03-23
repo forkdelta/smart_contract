@@ -161,7 +161,7 @@ Note: With the payable modifier, this function accepts Ether.
 This function handles withdrawals of Ether from the contract.  
 Verifies that the user has enough funds to cover the withdrawal.  
 Emits a Withdraw event.  
-@param amount: uint of the amount of Ether the user wishes to withdraw  
+@param amount uint of the amount of Ether the user wishes to withdraw  
   
 #### `function depositToken(address token, uint amount) public`
 This function handles deposits of Ethereum based tokens to the contract.  
@@ -311,16 +311,16 @@ Emits a FundsMigrated event.
 @param address Contract address of the new contract we are migrating funds to
 @param address[] Array of token addresses that we will be migrating to the new contract
 
-#### `function depositForUser(address user) private payable`
+#### `function depositForUser(address user) public payable`
 This function handles deposits of Ether into the contract, but allows specification of a user.
-Note: This is intended for use in migration of funds.
+Note: This is generally used in migration of funds.
 Note: With the payable modifier, this function accepts Ether.
 
-#### `function depositTokenForUser(address token, uint amount, address user) private`
+#### `function depositTokenForUser(address token, uint amount, address user) public`
 This function handles deposits of Ethereum based tokens into the contract, but allows specification of a user.
 Does not allow Ether.
 If token transfer fails, transaction is reverted and remaining gas is refunded.
-Note: This is intended for use in migration of funds.
+Note: This is generally used in migration of funds.
 Note: With the payable modifier, this function accepts Ether.
 Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
 @param token Ethereum contract address of the token or 0 for Ether

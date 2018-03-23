@@ -149,8 +149,8 @@ Changes the fee on takes. Can only be changed to a value less than it is current
 #### `function changeFreeUntilDate(uint freeUntilDate_) public isAdmin`
 Changes the date that trades are free until. Accepts UNIX timestamp.
 
-#### `function updateContract(address successor_) public isAdmin`
-Updates the contract by setting a successor.
+#### `function setSuccessor(address successor_) public isAdmin`
+Changes the successor. Used in updating the contract.
 
 #### `function deposit() public payable`
 This function handles deposits of Ether into the contract.  

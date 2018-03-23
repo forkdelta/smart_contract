@@ -11,7 +11,6 @@ contract ForkDelta {
   
   using SafeMath for uint;
 
-<<<<<<< HEAD
   /// Variables
   address public admin; // the admin address
   address public feeAccount; // the account that will receive fees
@@ -24,16 +23,6 @@ contract ForkDelta {
   address public predecessor; // Address of the previous version of this contract. If address(0), this is the first version
   address public successor; // Address of the next version of this contract. If address(0), this is the most up to date version.
   uint16 public version; // This is the version # of the contract
-=======
-  address public admin; //the admin address
-  address public feeAccount; //the account that will receive fees
-  uint public feeTake; //percentage times (1 ether)
-  uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
-  bool private depositingTokenFlag; //True when Token.transferFrom is being called from depositToken
-  mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
-  mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
-  mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
->>>>>>> master
 
   /// Logging Events
   event Order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user);
@@ -92,8 +81,9 @@ contract ForkDelta {
     freeUntilDate = freeUntilDate_;
   }
   
-  /// Updates the contract by setting a successor.
-  function updateContract(address successor_) public isAdmin {
+  /// Changes the successor. Used in updating the contract.
+  function setSuccessor(address successor_) public isAdmin {
+    require(successor_ != address(0));
     successor = successor_;
   }
   
@@ -400,20 +390,16 @@ contract ForkDelta {
     }
 
     // Move Tokens into new exchange.
-    for (n = 0; n < tokens_.length; n++) {
+    for (uint16 n = 0; n < tokens_.length; n++) {
       address token = tokens_[n];
       require(token != address(0)); // Ether is handled above.
       uint tokenAmount = tokens[token][msg.sender];
       
-      if (tokenAmount == 0) {
-        continue;
+      if (tokenAmount != 0) {      
+      	require(Token(token).approve(newExchange, tokenAmount));
+      	tokens[token][msg.sender] = 0;
+      	newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
       }
-      
-      require(Token(token).approve(newExchange, tokenAmount));
-      
-      tokens[token][msg.sender] = 0;
-      
-      newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
     }
 
     FundsMigrated(msg.sender, newContract);

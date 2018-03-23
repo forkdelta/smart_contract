@@ -452,7 +452,7 @@ contract ForkDelta {
   }
 
 /**
-  * This function transfers tokens from this contract to msg.sender by calling the transferFrom function of a token.
+  * This function transfers tokens from this contract to msg.sender by calling the transfer function of a token.
   * Since this calls untrusted 3rd party code, it is checked if the token amounts for msg.sender and our contract
   * address changed in the way we expected.
   * @param token Ethereum contract address of the token

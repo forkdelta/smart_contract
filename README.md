@@ -8,7 +8,7 @@ All contracts are located in the `contracts` folder.
   - [Setting up a development environment](#setting-up-a-development-environment)
   - [Migrating and testing with Ganache](#migrating-and-testing-with-ganache)
   - [Migrating and testing with truffle develop](#migrating-and-testing-with-truffle-develop)
-  - [Migrating to the live/production chain](#migrating-to-the-live-production-chain)
+  - [Migrating to the live/production chain](#migrating-to-the-liveproduction-chain)
 - [Libraries](#libraries)
   - [LSafeMath](#library-lsafemath)
 - [Contracts](#contracts)

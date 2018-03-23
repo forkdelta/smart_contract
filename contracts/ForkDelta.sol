@@ -402,7 +402,7 @@ contract ForkDelta {
       }
     }
 
-    FundsMigrated(msg.sender, newContract);
+    emit FundsMigrated(msg.sender, newContract);
   }
   
   /**

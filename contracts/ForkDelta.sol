@@ -1,7 +1,7 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.19;
 
-import "./Token.sol";
-import "./SafeMath.sol";
+import "./IToken.sol";
+import "./LSafeMath.sol";
 
 /**
  * @title ForkDelta
@@ -9,7 +9,7 @@ import "./SafeMath.sol";
  */
 contract ForkDelta {
   
-  using SafeMath for uint;
+  using LSafeMath for uint;
 
   address public admin; //the admin address
   address public feeAccount; //the account that will receive fees
@@ -60,7 +60,7 @@ contract ForkDelta {
 
   /// Changes the fee on makes. Can only be changed to a value less than it is currently set at.
   function changeFeeMake(uint feeMake_) public isAdmin {
-    require (feeMake_ <= feeMake);
+    require(feeMake_ <= feeMake);
     feeMake = feeMake_;
   }
 
@@ -82,20 +82,20 @@ contract ForkDelta {
   */
   function deposit() public payable {
     tokens[0][msg.sender] = tokens[0][msg.sender].add(msg.value);
-    emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
+    Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
   }
 
   /**
   * This function handles withdrawals of Ether from the contract.
   * Verifies that the user has enough funds to cover the withdrawal.
   * Emits a Withdraw event.
-  * @param amount: uint of the amount of Ether the user wishes to withdraw
+  * @param amount uint of the amount of Ether the user wishes to withdraw
   */
   function withdraw(uint amount) public {
     require(tokens[0][msg.sender] >= amount);
     tokens[0][msg.sender] = tokens[0][msg.sender].sub(amount);
     msg.sender.transfer(amount);
-    emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
+    Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
   /**
@@ -108,12 +108,12 @@ contract ForkDelta {
   * @param amount uint of the amount of the token the user wishes to deposit
   */
   function depositToken(address token, uint amount) public {
-    require(token!=0);
+    require(token != 0);
     depositingTokenFlag = true;
-    require(Token(token).transferFrom(msg.sender, this, amount));
+    require(IToken(token).transferFrom(msg.sender, this, amount));
     depositingTokenFlag = false;
     tokens[token][msg.sender] = tokens[token][msg.sender].add(amount);
-    emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
+    Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
  }
 
   /**
@@ -124,7 +124,7 @@ contract ForkDelta {
   * @param amount amount of the incoming tokens
   * @param data attached data similar to msg.data of Ether transactions
   */
-  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok)  {
+  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok) {
       if (depositingTokenFlag) {
         // Transfer was initiated from depositToken(). User token balance will be updated there.
         return true;
@@ -144,11 +144,11 @@ contract ForkDelta {
   * @param amount uint of the amount of the token the user wishes to withdraw
   */
   function withdrawToken(address token, uint amount) public {
-    require(token!=0);
+    require(token != 0);
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].sub(amount);
-    require(Token(token).transfer(msg.sender, amount));
-    emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
+    require(IToken(token).transfer(msg.sender, amount));
+    Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
   /**
@@ -175,7 +175,7 @@ contract ForkDelta {
   function order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     orders[msg.sender][hash] = true;
-    emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
+    Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
   }
 
   /**
@@ -201,44 +201,13 @@ contract ForkDelta {
   function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     require((
-      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
+      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == user) &&
       block.number <= expires &&
       orderFills[user][hash].add(amount) <= amountGet
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    emit Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
-  }
-
-  /**
-  * This is a private function and is only being called from trade().
-  * Handles the movement of funds when a trade occurs.
-  * Takes fees.
-  * Updates token balances for both buyer and seller.
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
-  * Note: amount is in amountGet / tokenGet terms.
-  * @param tokenGet Ethereum contract address of the token to receive
-  * @param amountGet uint amount of tokens being received
-  * @param tokenGive Ethereum contract address of the token to give
-  * @param amountGive uint amount of tokens being given
-  * @param user Ethereum address of the user who placed the order
-  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
-  */
-  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    
-    uint feeMakeXfer = 0;
-    uint feeTakeXfer = 0;
-    
-    if (now >= freeUntilDate) {
-      feeMakeXfer = amount.mul(feeMake).div(1 ether);
-      feeTakeXfer = amount.mul(feeTake).div(1 ether);
-    }
-    
-    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
-    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
-    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet);
-    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
+    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount) / amountGet, user, msg.sender);
   }
 
   /**
@@ -288,14 +257,14 @@ contract ForkDelta {
   function availableVolume(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     if (!(
-      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
+      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == user) &&
       block.number <= expires
       )) {
       return 0;
     }
     uint[2] memory available;
     available[0] = amountGet.sub(orderFills[user][hash]);
-    available[1] = tokens[tokenGive][user].mul(amountGet).div(amountGive);
+    available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
     if (available[0] < available[1]) {
       return available[0];
     } else {
@@ -335,7 +304,6 @@ contract ForkDelta {
   * @param amountGive uint amount of tokens being given
   * @param expires uint of block number when this order should expire
   * @param nonce arbitrary random number
-  * @param user Ethereum address of the user who placed the order
   * @param v part of signature for the order hash as signed by user
   * @param r part of signature for the order hash as signed by user
   * @param s part of signature for the order hash as signed by user
@@ -343,8 +311,39 @@ contract ForkDelta {
   */
   function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender));
+    require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == msg.sender));
     orderFills[msg.sender][hash] = amountGet;
-    emit Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
+    Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
+  }
+
+  /**
+  * This is a private function and is only being called from trade().
+  * Handles the movement of funds when a trade occurs.
+  * Takes fees.
+  * Updates token balances for both buyer and seller.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param user Ethereum address of the user who placed the order
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  */
+  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
+    
+    uint feeMakeXfer = 0;
+    uint feeTakeXfer = 0;
+    
+    if (now >= freeUntilDate) {
+      feeMakeXfer = amount.mul(feeMake).div(1 ether);
+      feeTakeXfer = amount.mul(feeTake).div(1 ether);
+    }
+    
+    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
+    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
+    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
+    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
+    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 }

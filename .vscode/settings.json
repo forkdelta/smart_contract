@@ -1,0 +1,16 @@
+{
+    "solidity.compileUsingRemoteVersion" : "v0.4.19+commit.c4cbbb05",
+    "solidity.linter": "solhint",
+    "solidity.solhintRules": {
+      "avoid-throw": false,
+      "avoid-suicide": "error",
+      "avoid-sha3": "warn",
+      "indent": false,
+      "two-lines-top-level-separator": false,
+      "func-param-name-mixedcase": false,
+      "func-name-mixedcase": false,
+      "max-line-length": false,
+      "function-max-lines": false
+    }
+    
+}

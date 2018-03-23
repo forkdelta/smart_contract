@@ -110,3 +110,5 @@ ENV/
 #misc
 .pydevproject
 .project
+build/*
+node_modules/*

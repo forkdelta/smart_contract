@@ -1,10 +1,10 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.19;
 
 /**
  * @title Token
  * @dev Token interface necessary for working with tokens within the exchange contract.
  */
-contract Token {
+contract IToken {
   /// @return total amount of tokens
   function totalSupply() public constant returns (uint256 supply) {}
 

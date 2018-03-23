@@ -1,10 +1,10 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.19;
 
 /**
  * @title SafeMath
  * @dev Math operations with safety checks that throw on error
  */
-library SafeMath {
+library LSafeMath {
 
   /**
   * @dev Multiplies two numbers, throws on overflow.

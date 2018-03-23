@@ -410,7 +410,7 @@ contract ForkDelta {
   * Note: This is intended for use in migration of funds.
   * Note: With the payable modifier, this function accepts Ether.
   */
-  function depositForUser(address user) public payable {
+  function depositForUser(address user) private payable {
     require(user != address(0));
     require(msg.value > 0);
     tokens[0][user] = tokens[0][user].add(msg.value);
@@ -425,7 +425,7 @@ contract ForkDelta {
   * @param token Ethereum contract address of the token
   * @param amount uint of the amount of the token the user wishes to deposit
   */
-  function depositTokenForUser(address token, uint amount, address user) public {
+  function depositTokenForUser(address token, uint amount, address user) private {
     require(token != address(0));
     require(user != address(0));
     require(amount > 0);

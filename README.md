@@ -311,12 +311,12 @@ Emits a FundsMigrated event.
 @param address Contract address of the new contract we are migrating funds to
 @param address[] Array of token addresses that we will be migrating to the new contract
 
-#### `function depositForUser(address user) public payable`
+#### `function depositForUser(address user) private payable`
 This function handles deposits of Ether into the contract, but allows specification of a user.
 Note: This is intended for use in migration of funds.
 Note: With the payable modifier, this function accepts Ether.
 
-#### `function depositTokenForUser(address token, uint amount, address user) public`
+#### `function depositTokenForUser(address token, uint amount, address user) private`
 This function handles deposits of Ethereum based tokens into the contract, but allows specification of a user.
 Does not allow Ether.
 If token transfer fails, transaction is reverted and remaining gas is refunded.

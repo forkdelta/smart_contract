@@ -114,3 +114,6 @@ package-lock.json
 #misc
 .pydevproject
 .project
+build/*
+node_modules/*
+.vscode/settings.json

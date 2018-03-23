@@ -4,43 +4,85 @@ This is the official repository for all things regarding the ForkDela smart cont
 All contracts are located in the `contracts` folder.
 
 ## Summary
+- [Development](#development)
+  - [Setting up a development environment](#setting-up-a-development-environment)
+  - [Migrating and testing with Ganache](#migrating-and-testing-with-ganache)
+  - [Migrating and testing with truffle develop](#migrating-and-testing-with-truffle-develop)
+  - [Migrating to the live/production chain](#migrating-to-the-liveproduction-chain)
 - [Libraries](#libraries)
-  - [SafeMath](#library-safemath)
+  - [LSafeMath](#library-lsafemath)
 - [Contracts](#contracts)
-  - [Token](#contract-token)
-    - [Variables](#token-variables)
-    - [Events](#token-events)
-    - [Functions](#token-functions)
+  - [IToken](#contract-itoken)
+    - [Variables](#itoken-variables)
+    - [Events](#itoken-events)
+    - [Functions](#itoken-functions)
   - [ForkDelta](#contract-forkdelta)
     - [Variables](#forkdelta-variables)
     - [Events](#forkdelta-events)
     - [Modifiers](#forkdelta-modifiers)
     - [Functions](#forkdelta-functions)
 
+
+## Development
+
+### Setting up a development environment
+Requirements:
+* Node.js (https://nodejs.org/en/)
+* git client (https://git-scm.com/download/)
+
+Setup:
+1. Install truffle: `npm install -g truffle`
+2. On Windows install the necessary build tools: `npm install --global --production windows-build-tools`
+3. Install Ganache from: http://truffleframework.com/ganache/
+4. Clone the repo: git clone https://github.com/forkdelta/smart_contract.git
+5. Change into the root directory: `cd smart_contract`
+6. Install all node.js requirements from package.json: `npm install`
+7. If you use VSCode, copy `.vscode\settings.json.default` to `.vscode\settings.json` for a reasonable solhint linter configuration
+
+### Migrating and testing with Ganache
+* Start ganache
+* Compile: `truffle compile`
+* Migrate: `truffle migrate`
+* Run test cases: `truffle test`
+
+### Migrating and testing with truffle develop
+* `truffle develop`
+* Compile: `compile`
+* Migrate: `migrate`
+* Run test cases: `test`
+
+### Migrating to the live/production chain
+* Edit "live" section in `truffle.js`:
+* Set reasonable gas price based on https://ethgasstation.info
+* Start local ethereum node (geth/parity) and set connection parameters in `truffle.js` 
+* Set/verify creation parameter for ForkDelta contract in `./migrations/2_deploy_contracts_js`  
+* Unlock account in geth/parity that is used for deploying the contract (first account or the one specified with "from" in `truffle.js`)
+* `truffle migrate -network=live`
+
 ## Libraries
 
-### library `SafeMath`
+### library `LSafeMath`
 
 This is a library for math operations with safety checks that will throw on error.
 
 ## Contracts
 
-### contract `Token`
+### contract `IToken`
 
 This is the token interface necessary for working with tokens within the exchange contract.
 
-#### `Token` Variables
+#### `IToken` Variables
 
 decimals `uint public decimals`  
 name `string public name`  
 
-#### `Token` Events
+#### `IToken` Events
 
 ##### `event Transfer(address indexed _from, address indexed _to, uint256 _value);`
 ##### `event Approval(address indexed _owner, address indexed _spender, uint256 _value);`
 
 
-#### `Token` Functions
+#### `IToken` Functions
 
 #### `function totalSupply() public constant returns (uint256 supply) {}`
 @return total amount of tokens
@@ -78,7 +120,7 @@ name `string public name`
 ### contract `ForkDelta`
 
 This is the main contract for the ForkDelta exchange.  
-This contract uses the SafeMath library for uint variables.  
+This contract uses the LSafeMath library for uint variables.  
 
 #### `ForkDelta` Variables
 

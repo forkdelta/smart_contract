@@ -1,7 +1,7 @@
-pragma solidity ^0.4.21;
+pragma solidity 0.4.19;
 
-import "./Token.sol";
-import "./SafeMath.sol";
+import "./IToken.sol";
+import "./LSafeMath.sol";
 
 /**
  * @title ForkDelta
@@ -9,7 +9,7 @@ import "./SafeMath.sol";
  */
 contract ForkDelta {
   
-  using SafeMath for uint;
+  using LSafeMath for uint;
 
   /// Variables
   address public admin; // the admin address
@@ -98,7 +98,7 @@ contract ForkDelta {
   */
   function deposit() public payable {
     tokens[0][msg.sender] = tokens[0][msg.sender].add(msg.value);
-    emit Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
+    Deposit(0, msg.sender, msg.value, tokens[0][msg.sender]);
   }
 
   /**
@@ -111,7 +111,7 @@ contract ForkDelta {
     require(tokens[0][msg.sender] >= amount);
     tokens[0][msg.sender] = tokens[0][msg.sender].sub(amount);
     msg.sender.transfer(amount);
-    emit Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
+    Withdraw(0, msg.sender, amount, tokens[0][msg.sender]);
   }
 
   /**
@@ -124,12 +124,12 @@ contract ForkDelta {
   * @param amount uint of the amount of the token the user wishes to deposit
   */
   function depositToken(address token, uint amount) public {
-    require(token!=0);
+    require(token != 0);
     depositingTokenFlag = true;
-    require(Token(token).transferFrom(msg.sender, this, amount));
+    require(IToken(token).transferFrom(msg.sender, this, amount));
     depositingTokenFlag = false;
     tokens[token][msg.sender] = tokens[token][msg.sender].add(amount);
-    emit Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
+    Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
  }
 
   /**
@@ -140,7 +140,7 @@ contract ForkDelta {
   * @param amount amount of the incoming tokens
   * @param data attached data similar to msg.data of Ether transactions
   */
-  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok)  {
+  function tokenFallback( address sender, uint amount, bytes data) public returns (bool ok) {
       if (depositingTokenFlag) {
         // Transfer was initiated from depositToken(). User token balance will be updated there.
         return true;
@@ -160,11 +160,11 @@ contract ForkDelta {
   * @param amount uint of the amount of the token the user wishes to withdraw
   */
   function withdrawToken(address token, uint amount) public {
-    require(token!=0);
+    require(token != 0);
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].sub(amount);
-    require(Token(token).transfer(msg.sender, amount));
-    emit Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
+    require(IToken(token).transfer(msg.sender, amount));
+    Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
   /**
@@ -195,7 +195,7 @@ contract ForkDelta {
   function order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     orders[msg.sender][hash] = true;
-    emit Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
+    Order(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender);
   }
 
   /**
@@ -221,13 +221,13 @@ contract ForkDelta {
   function trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s, uint amount) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     require((
-      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
+      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == user) &&
       block.number <= expires &&
       orderFills[user][hash].add(amount) <= amountGet
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    emit Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
+    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount) / amountGet, user, msg.sender);
   }
 
   /**
@@ -306,14 +306,14 @@ contract ForkDelta {
   function availableVolume(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s) public constant returns(uint) {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
     if (!(
-      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == user) &&
+      (orders[user][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == user) &&
       block.number <= expires
       )) {
       return 0;
     }
     uint[2] memory available;
     available[0] = amountGet.sub(orderFills[user][hash]);
-    available[1] = tokens[tokenGive][user].mul(amountGet).div(amountGive);
+    available[1] = tokens[tokenGive][user].mul(amountGet) / amountGive;
     if (available[0] < available[1]) {
       return available[0];
     } else {
@@ -353,7 +353,6 @@ contract ForkDelta {
   * @param amountGive uint amount of tokens being given
   * @param expires uint of block number when this order should expire
   * @param nonce arbitrary random number
-  * @param user Ethereum address of the user who placed the order
   * @param v part of signature for the order hash as signed by user
   * @param r part of signature for the order hash as signed by user
   * @param s part of signature for the order hash as signed by user
@@ -361,10 +360,12 @@ contract ForkDelta {
   */
   function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash),v,r,s) == msg.sender));
+    require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == msg.sender));
     orderFills[msg.sender][hash] = amountGet;
-    emit Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
+    Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }
+
+
   
   ////////////////////////////////////////////////////////////////////////////////
   // Contract Versioning / Migration
@@ -373,8 +374,8 @@ contract ForkDelta {
   /**
   * User triggered function to migrate funds into a new contract to ease updates.
   * Emits a FundsMigrated event.
-  * @param address Contract address of the new contract we are migrating funds to
-  * @param address[] Array of token addresses that we will be migrating to the new contract
+  * @param newContract Contract address of the new contract we are migrating funds to
+  * @param tokens_ Array of token addresses that we will be migrating to the new contract
   */
   function migrateFunds(address newContract, address[] tokens_) public {
   
@@ -396,13 +397,13 @@ contract ForkDelta {
       uint tokenAmount = tokens[token][msg.sender];
       
       if (tokenAmount != 0) {      
-      	require(Token(token).approve(newExchange, tokenAmount));
+      	require(IToken(token).approve(newExchange, tokenAmount));
       	tokens[token][msg.sender] = 0;
       	newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
       }
     }
 
-    emit FundsMigrated(msg.sender, newContract);
+    FundsMigrated(msg.sender, newContract);
   }
   
   /**
@@ -430,7 +431,7 @@ contract ForkDelta {
     require(user != address(0));
     require(amount > 0);
     depositingTokenFlag = true;
-    require(Token(token).transferFrom(msg.sender, this, amount));
+    require(IToken(token).transferFrom(msg.sender, this, amount));
     depositingTokenFlag = false;
     tokens[token][user] = tokens[token][user].add(amount);
   }

@@ -5,6 +5,10 @@ All contracts are located in the `contracts` folder.
 
 ## Summary
 - [Development](#development)
+  - [Setting up a development environment](#setting-up-a-development-environment)
+  - [Migrating and testing with Ganache](#migrating-and-testing-with-ganache)
+  - [Migrating and testing with truffle develop](#migrating-and-testing-with-truffle-develop)
+  - [Migrating to the live/production chain](#migrating-to-the-live-production-chain)
 - [Libraries](#libraries)
   - [LSafeMath](#library-lsafemath)
 - [Contracts](#contracts)
@@ -35,7 +39,7 @@ Setup:
 6. Install all node.js requirements from package.json: `npm install`
 7. If you use VSCode, copy `.vscode\settings.json.default` to `.vscode\settings.json` for a reasonable solhint linter configuration
 
-### Migrating and testing with Ganache:
+### Migrating and testing with Ganache
 * Start ganache
 * Compile: `truffle compile`
 * Migrate: `truffle migrate`

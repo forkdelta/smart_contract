@@ -90,7 +90,6 @@ contract ForkDelta {
   ////////////////////////////////////////////////////////////////////////////////
   // Deposits, Withdrawals, Balances
   ////////////////////////////////////////////////////////////////////////////////
-
   /**
   * This function handles deposits of Ether into the contract.
   * Emits a Deposit event.
@@ -125,9 +124,7 @@ contract ForkDelta {
   */
   function depositToken(address token, uint amount) public {
     require(token != 0);
-    depositingTokenFlag = true;
-    require(IToken(token).transferFrom(msg.sender, this, amount));
-    depositingTokenFlag = false;
+    safeTokenTransferFrom(token, amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].add(amount);
     Deposit(token, msg.sender, amount, tokens[token][msg.sender]);
  }
@@ -163,7 +160,7 @@ contract ForkDelta {
     require(token != 0);
     require(tokens[token][msg.sender] >= amount);
     tokens[token][msg.sender] = tokens[token][msg.sender].sub(amount);
-    require(IToken(token).transfer(msg.sender, amount));
+    safeTokenTransfer(token, amount);
     Withdraw(token, msg.sender, amount, tokens[token][msg.sender]);
   }
 
@@ -180,7 +177,6 @@ contract ForkDelta {
   ////////////////////////////////////////////////////////////////////////////////
   // Trading
   ////////////////////////////////////////////////////////////////////////////////
-
   /**
   * Stores the active order inside of the contract.
   * Emits an Order event.
@@ -228,35 +224,6 @@ contract ForkDelta {
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
     Trade(tokenGet, amount, tokenGive, amountGive.mul(amount) / amountGet, user, msg.sender);
-  }
-
-  /**
-  * This is a private function and is only being called from trade().
-  * Handles the movement of funds when a trade occurs.
-  * Takes fees.
-  * Updates token balances for both buyer and seller.
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
-  * Note: amount is in amountGet / tokenGet terms.
-  * @param tokenGet Ethereum contract address of the token to receive
-  * @param amountGet uint amount of tokens being received
-  * @param tokenGive Ethereum contract address of the token to give
-  * @param amountGive uint amount of tokens being given
-  * @param user Ethereum address of the user who placed the order
-  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
-  */
-  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    
-    uint feeTakeXfer = 0;
-    
-    if (now >= freeUntilDate) {
-      feeTakeXfer = amount.mul(feeTake).div(1 ether);
-    }
-    
-    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
-    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount);
-    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeTakeXfer);
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
-    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 
   /**
@@ -360,17 +327,14 @@ contract ForkDelta {
   */
   function cancelOrder(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, uint8 v, bytes32 r, bytes32 s) public {
     bytes32 hash = sha256(this, tokenGet, amountGet, tokenGive, amountGive, expires, nonce);
-    require ((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == msg.sender));
+    require((orders[msg.sender][hash] || ecrecover(keccak256("\x19Ethereum Signed Message:\n32", hash), v, r, s) == msg.sender));
     orderFills[msg.sender][hash] = amountGet;
     Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }
-
-
   
   ////////////////////////////////////////////////////////////////////////////////
   // Contract Versioning / Migration
   ////////////////////////////////////////////////////////////////////////////////
-  
   /**
   * User triggered function to migrate funds into a new contract to ease updates.
   * Emits a FundsMigrated event.
@@ -397,9 +361,9 @@ contract ForkDelta {
       uint tokenAmount = tokens[token][msg.sender];
       
       if (tokenAmount != 0) {      
-      	require(IToken(token).approve(newExchange, tokenAmount));
-      	tokens[token][msg.sender] = 0;
-      	newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
+        require(IToken(token).approve(newExchange, tokenAmount));
+        tokens[token][msg.sender] = 0;
+        newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
       }
     }
 
@@ -430,10 +394,78 @@ contract ForkDelta {
     require(token != address(0));
     require(user != address(0));
     require(amount > 0);
+    safeTokenTransferFrom(token, amount);
+    tokens[token][user] = tokens[token][user].add(amount);
+  }
+
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+/**
+  * This is a private function and is only being called from trade().
+  * Handles the movement of funds when a trade occurs.
+  * Takes fees.
+  * Updates token balances for both buyer and seller.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param user Ethereum address of the user who placed the order
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  */
+  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
+    
+    uint feeTakeXfer = 0;
+    
+    if (now >= freeUntilDate) {
+      feeTakeXfer = amount.mul(feeTake).div(1 ether);
+    }
+    
+    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
+    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount);
+    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeTakeXfer);
+    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
+    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
+  }
+
+/**
+  * This function transfers tokens from msg.sender into this contract by calling the transferFrom function of a token.
+  * Since this calls untrusted 3rd party code, it is checked if the token amounts for msg.sender and our contract
+  * address changed in the way we expected.
+  * Further, it sets the depositingTokenFlag, so that if the token is a ECR223 token the tokenFallback function will
+  * allow the incoming token transfer.
+  * @param token Ethereum contract address of the token
+  * @param amount uint of the amount of the token the user wishes to deposit
+  */
+  function safeTokenTransferFrom(address token, uint amount) private {
+    require(token != address(0));
+    require(amount > 0);
+    uint ourTokenBalanceBefore = IToken(token).balanceOf(this);
+    uint senderTokenBalanceBefore = IToken(token).balanceOf(msg.sender);
     depositingTokenFlag = true;
     require(IToken(token).transferFrom(msg.sender, this, amount));
     depositingTokenFlag = false;
-    tokens[token][user] = tokens[token][user].add(amount);
+    require(ourTokenBalanceBefore.add(amount) == IToken(token).balanceOf(this));
+    require(senderTokenBalanceBefore.sub(amount) == IToken(token).balanceOf(msg.sender));
   }
-  
+
+/**
+  * This function transfers tokens from this contract to msg.sender by calling the transferFrom function of a token.
+  * Since this calls untrusted 3rd party code, it is checked if the token amounts for msg.sender and our contract
+  * address changed in the way we expected.
+  * @param token Ethereum contract address of the token
+  * @param amount uint of the amount of the token the user wishes to deposit
+  */
+  function safeTokenTransfer(address token, uint amount) private {
+    require(token != address(0));
+    require(amount > 0);
+    uint ourTokenBalanceBefore = IToken(token).balanceOf(this);
+    uint receiverTokenBalanceBefore = IToken(token).balanceOf(msg.sender);
+    require(IToken(token).transfer(msg.sender, amount));
+    require(ourTokenBalanceBefore.sub(amount) == IToken(token).balanceOf(this));
+    require(receiverTokenBalanceBefore.add(amount) == IToken(token).balanceOf(msg.sender));
+  }
+
 }

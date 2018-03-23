@@ -227,7 +227,7 @@ contract ForkDelta {
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
+    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount) / amountGet, user, msg.sender);
   }
 
   /**
@@ -365,36 +365,7 @@ contract ForkDelta {
     Cancel(tokenGet, amountGet, tokenGive, amountGive, expires, nonce, msg.sender, v, r, s);
   }
 
-  /**
-  * This is a private function and is only being called from trade().
-  * Handles the movement of funds when a trade occurs.
-  * Takes fees.
-  * Updates token balances for both buyer and seller.
-  * Note: tokenGet & tokenGive can be the Ethereum contract address.
-  * Note: amount is in amountGet / tokenGet terms.
-  * @param tokenGet Ethereum contract address of the token to receive
-  * @param amountGet uint amount of tokens being received
-  * @param tokenGive Ethereum contract address of the token to give
-  * @param amountGive uint amount of tokens being given
-  * @param user Ethereum address of the user who placed the order
-  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
-  */
-  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
-    
-    uint feeMakeXfer = 0;
-    uint feeTakeXfer = 0;
-    
-    if (now >= freeUntilDate) {
-      feeMakeXfer = amount.mul(feeMake).div(1 ether);
-      feeTakeXfer = amount.mul(feeTake).div(1 ether);
-    }
-    
-    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
-    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount.sub(feeMakeXfer));
-    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeMakeXfer.add(feeTakeXfer));
-    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
-    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
-  }
+
   
   ////////////////////////////////////////////////////////////////////////////////
   // Contract Versioning / Migration
@@ -403,8 +374,8 @@ contract ForkDelta {
   /**
   * User triggered function to migrate funds into a new contract to ease updates.
   * Emits a FundsMigrated event.
-  * @param address Contract address of the new contract we are migrating funds to
-  * @param address[] Array of token addresses that we will be migrating to the new contract
+  * @param newContract Contract address of the new contract we are migrating funds to
+  * @param tokens_ Array of token addresses that we will be migrating to the new contract
   */
   function migrateFunds(address newContract, address[] tokens_) public {
   
@@ -426,13 +397,13 @@ contract ForkDelta {
       uint tokenAmount = tokens[token][msg.sender];
       
       if (tokenAmount != 0) {      
-      	require(Token(token).approve(newExchange, tokenAmount));
+      	require(IToken(token).approve(newExchange, tokenAmount));
       	tokens[token][msg.sender] = 0;
       	newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
       }
     }
 
-    emit FundsMigrated(msg.sender, newContract);
+    FundsMigrated(msg.sender, newContract);
   }
   
   /**
@@ -460,7 +431,7 @@ contract ForkDelta {
     require(user != address(0));
     require(amount > 0);
     depositingTokenFlag = true;
-    require(Token(token).transferFrom(msg.sender, this, amount));
+    require(IToken(token).transferFrom(msg.sender, this, amount));
     depositingTokenFlag = false;
     tokens[token][user] = tokens[token][user].add(amount);
   }

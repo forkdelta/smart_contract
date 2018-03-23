@@ -116,3 +116,4 @@ package-lock.json
 .project
 build/*
 node_modules/*
+.vscode/settings.json

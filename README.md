@@ -17,6 +17,7 @@ Setup:
 4. Clone the repo: git clone https://github.com/forkdelta/smart_contract.git
 5. Change into the root directory: `cd smart_contract`
 6. Install all node.js requirements from package.json: `npm install`
+7. If you use VSCode, copy `.vscode\settings.json.default` to `.vscode\settings.json` for a reasonable linter configuration
 
 ### Migrating and testing with Ganache:
 * Start ganache

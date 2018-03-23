@@ -106,6 +106,15 @@ The mapping of user accounts to mapping of order hashes to booleans (true = subm
 __orderFills__ `mapping (address => mapping (bytes32 => uint)) public orderFills;`  
 The mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
 
+__predecessor__ `address public predecessor`  
+Address of the previous version of this contract. If address(0), this is the first version
+
+__successor__ `address public successor`  
+Address of the next version of this contract. If address(0), this is the most up to date version
+
+__version__ `uint16 public version`  
+The version # of the contract
+
 #### `ForkDelta` Events
 
 ##### `event Order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user);`
@@ -113,6 +122,7 @@ The mapping of user accounts to mapping of order hashes to uints (amount of orde
 ##### `event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address get, address give);`
 ##### `event Deposit(address token, address user, uint amount, uint balance);`
 ##### `event Withdraw(address token, address user, uint amount, uint balance);`
+##### `event FundsMigrated(address user, address newContract);`
 
 #### `ForkDelta` Modifiers
 
@@ -121,7 +131,7 @@ This is a modifier for functions to check if the sending user address is the sam
 
 #### `ForkDelta` Functions
 
-#### `function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_) public`
+#### `function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_, address predecessor_) public`
 Constructor function. This is only called on contract creation.
 
 #### `function() public`
@@ -139,6 +149,9 @@ Changes the fee on takes. Can only be changed to a value less than it is current
 #### `function changeFreeUntilDate(uint freeUntilDate_) public isAdmin`
 Changes the date that trades are free until. Accepts UNIX timestamp.
 
+#### `function setSuccessor(address successor_) public isAdmin`
+Changes the successor. Used in updating the contract.
+
 #### `function deposit() public payable`
 This function handles deposits of Ether into the contract.  
 Emits a Deposit event.  
@@ -148,7 +161,7 @@ Note: With the payable modifier, this function accepts Ether.
 This function handles withdrawals of Ether from the contract.  
 Verifies that the user has enough funds to cover the withdrawal.  
 Emits a Withdraw event.  
-@param amount: uint of the amount of Ether the user wishes to withdraw  
+@param amount uint of the amount of Ether the user wishes to withdraw  
   
 #### `function depositToken(address token, uint amount) public`
 This function handles deposits of Ethereum based tokens to the contract.  
@@ -291,3 +304,24 @@ Note: tokenGet & tokenGive can be the Ethereum contract address.
 @param r part of signature for the order hash as signed by user  
 @param s part of signature for the order hash as signed by user  
 @return uint: amount of the given order that has already been filled in terms of amountGet / tokenGet  
+
+#### `function migrateFunds(address newContract, address[] tokens_) public`
+User triggered function to migrate funds into a new contract to ease updates.
+Emits a FundsMigrated event.
+@param address Contract address of the new contract we are migrating funds to
+@param address[] Array of token addresses that we will be migrating to the new contract
+
+#### `function depositForUser(address user) public payable`
+This function handles deposits of Ether into the contract, but allows specification of a user.
+Note: This is generally used in migration of funds.
+Note: With the payable modifier, this function accepts Ether.
+
+#### `function depositTokenForUser(address token, uint amount, address user) public`
+This function handles deposits of Ethereum based tokens into the contract, but allows specification of a user.
+Does not allow Ether.
+If token transfer fails, transaction is reverted and remaining gas is refunded.
+Note: This is generally used in migration of funds.
+Note: With the payable modifier, this function accepts Ether.
+Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
+@param token Ethereum contract address of the token or 0 for Ether
+@param amount uint of the amount of the token the user wishes to deposit

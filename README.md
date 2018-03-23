@@ -3,6 +3,22 @@
 This is the official repository for all things regarding the ForkDela smart contract.  
 All contracts are located in the `contracts` folder.
 
+## Summary
+- [Development](#development)
+- [Libraries](#libraries)
+  - [LSafeMath](#library-safemath)
+- [Contracts](#contracts)
+  - [IToken](#contract-token)
+    - [Variables](#token-variables)
+    - [Events](#token-events)
+    - [Functions](#token-functions)
+  - [ForkDelta](#contract-forkdelta)
+    - [Variables](#forkdelta-variables)
+    - [Events](#forkdelta-events)
+    - [Modifiers](#forkdelta-modifiers)
+    - [Functions](#forkdelta-functions)
+
+
 ## Development
 
 ### Setting up a development environment
@@ -17,7 +33,7 @@ Setup:
 4. Clone the repo: git clone https://github.com/forkdelta/smart_contract.git
 5. Change into the root directory: `cd smart_contract`
 6. Install all node.js requirements from package.json: `npm install`
-7. If you use VSCode, copy `.vscode\settings.json.default` to `.vscode\settings.json` for a reasonable linter configuration
+7. If you use VSCode, copy `.vscode\settings.json.default` to `.vscode\settings.json` for a reasonable solhint linter configuration
 
 ### Migrating and testing with Ganache:
 * Start ganache
@@ -25,7 +41,7 @@ Setup:
 * Migrate: `truffle migrate`
 * Run test cases: `truffle test`
 
-### Migrate and test with develop
+### Migrate and test with truffle develop
 * `truffle develop`
 * Compile: `compile`
 * Migrate: `migrate`
@@ -33,24 +49,11 @@ Setup:
 
 ### Migrate to the live/production chain
 * Edit "live" section in `truffle.js`:
-  * Set gas price based on https://ethgasstation.info
-  * Start local ethereum node (geth/parity) and set connection parameters in `truffle.js` 
-  * Set/verify creation parameter for ForkDelta contract in `./migrations/2_deploy_contracts_js`
+* Set reasonable gas price based on https://ethgasstation.info
+* Start local ethereum node (geth/parity) and set connection parameters in `truffle.js` 
+* Set/verify creation parameter for ForkDelta contract in `./migrations/2_deploy_contracts_js`  
+* Unlock account in geth/parity that is used for deploying the contract (first account or the one specified with "from" in `truffle.js`)
 * `truffle migrate -network=live`
-
-## Summary
-- [Libraries](#libraries)
-  - [LSafeMath](#library-safemath)
-- [Contracts](#contracts)
-  - [IToken](#contract-token)
-    - [Variables](#token-variables)
-    - [Events](#token-events)
-    - [Functions](#token-functions)
-  - [ForkDelta](#contract-forkdelta)
-    - [Variables](#forkdelta-variables)
-    - [Events](#forkdelta-events)
-    - [Modifiers](#forkdelta-modifiers)
-    - [Functions](#forkdelta-functions)
 
 ## Libraries
 

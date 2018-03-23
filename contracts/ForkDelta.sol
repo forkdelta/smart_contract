@@ -11,21 +11,26 @@ contract ForkDelta {
   
   using LSafeMath for uint;
 
-  address public admin; //the admin address
-  address public feeAccount; //the account that will receive fees
-  uint public feeMake; //percentage times (1 ether)
-  uint public feeTake; //percentage times (1 ether)
-  uint public freeUntilDate; //date in UNIX timestamp that trades will be free until
-  bool private depositingTokenFlag; //True when Token.transferFrom is being called from depositToken
-  mapping (address => mapping (address => uint)) public tokens; //mapping of token addresses to mapping of account balances (token=0 means Ether)
-  mapping (address => mapping (bytes32 => bool)) public orders; //mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
-  mapping (address => mapping (bytes32 => uint)) public orderFills; //mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
+  /// Variables
+  address public admin; // the admin address
+  address public feeAccount; // the account that will receive fees
+  uint public feeTake; // percentage times (1 ether)
+  uint public freeUntilDate; // date in UNIX timestamp that trades will be free until
+  bool private depositingTokenFlag; // True when Token.transferFrom is being called from depositToken
+  mapping (address => mapping (address => uint)) public tokens; // mapping of token addresses to mapping of account balances (token=0 means Ether)
+  mapping (address => mapping (bytes32 => bool)) public orders; // mapping of user accounts to mapping of order hashes to booleans (true = submitted by user, equivalent to offchain signature)
+  mapping (address => mapping (bytes32 => uint)) public orderFills; // mapping of user accounts to mapping of order hashes to uints (amount of order that has been filled)
+  address public predecessor; // Address of the previous version of this contract. If address(0), this is the first version
+  address public successor; // Address of the next version of this contract. If address(0), this is the most up to date version.
+  uint16 public version; // This is the version # of the contract
 
+  /// Logging Events
   event Order(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user);
   event Cancel(address tokenGet, uint amountGet, address tokenGive, uint amountGive, uint expires, uint nonce, address user, uint8 v, bytes32 r, bytes32 s);
   event Trade(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address get, address give);
   event Deposit(address token, address user, uint amount, uint balance);
   event Withdraw(address token, address user, uint amount, uint balance);
+  event FundsMigrated(address user, address newContract);
 
   /// This is a modifier for functions to check if the sending user address is the same as the admin user address.
   modifier isAdmin() {
@@ -34,13 +39,19 @@ contract ForkDelta {
   }
 
   /// Constructor function. This is only called on contract creation.
-  function ForkDelta(address admin_, address feeAccount_, uint feeMake_, uint feeTake_, uint freeUntilDate_) public {
+  function ForkDelta(address admin_, address feeAccount_, uint feeTake_, uint freeUntilDate_, address predecessor_) public {
     admin = admin_;
     feeAccount = feeAccount_;
-    feeMake = feeMake_;
     feeTake = feeTake_;
     freeUntilDate = freeUntilDate_;
     depositingTokenFlag = false;
+    predecessor = predecessor_;
+    
+    if (predecessor != address(0)) {
+      version = ForkDelta(predecessor).version() + 1;
+    } else {
+      version = 1;
+    }
   }
 
   /// The fallback function. Ether transfered into the contract is not accepted.
@@ -50,18 +61,13 @@ contract ForkDelta {
 
   /// Changes the official admin user address. Accepts Ethereum address.
   function changeAdmin(address admin_) public isAdmin {
+    require(admin_ != address(0));
     admin = admin_;
   }
 
   /// Changes the account address that receives trading fees. Accepts Ethereum address.
   function changeFeeAccount(address feeAccount_) public isAdmin {
     feeAccount = feeAccount_;
-  }
-
-  /// Changes the fee on makes. Can only be changed to a value less than it is currently set at.
-  function changeFeeMake(uint feeMake_) public isAdmin {
-    require(feeMake_ <= feeMake);
-    feeMake = feeMake_;
   }
 
   /// Changes the fee on takes. Can only be changed to a value less than it is currently set at.
@@ -74,6 +80,16 @@ contract ForkDelta {
   function changeFreeUntilDate(uint freeUntilDate_) public isAdmin {
     freeUntilDate = freeUntilDate_;
   }
+  
+  /// Changes the successor. Used in updating the contract.
+  function setSuccessor(address successor_) public isAdmin {
+    require(successor_ != address(0));
+    successor = successor_;
+  }
+  
+  ////////////////////////////////////////////////////////////////////////////////
+  // Deposits, Withdrawals, Balances
+  ////////////////////////////////////////////////////////////////////////////////
 
   /**
   * This function handles deposits of Ether into the contract.
@@ -161,6 +177,10 @@ contract ForkDelta {
     return tokens[token][user];
   }
 
+  ////////////////////////////////////////////////////////////////////////////////
+  // Trading
+  ////////////////////////////////////////////////////////////////////////////////
+
   /**
   * Stores the active order inside of the contract.
   * Emits an Order event.
@@ -207,7 +227,36 @@ contract ForkDelta {
     ));
     tradeBalances(tokenGet, amountGet, tokenGive, amountGive, user, amount);
     orderFills[user][hash] = orderFills[user][hash].add(amount);
-    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount) / amountGet, user, msg.sender);
+    Trade(tokenGet, amount, tokenGive, amountGive.mul(amount).div(amountGet), user, msg.sender);
+  }
+
+  /**
+  * This is a private function and is only being called from trade().
+  * Handles the movement of funds when a trade occurs.
+  * Takes fees.
+  * Updates token balances for both buyer and seller.
+  * Note: tokenGet & tokenGive can be the Ethereum contract address.
+  * Note: amount is in amountGet / tokenGet terms.
+  * @param tokenGet Ethereum contract address of the token to receive
+  * @param amountGet uint amount of tokens being received
+  * @param tokenGive Ethereum contract address of the token to give
+  * @param amountGive uint amount of tokens being given
+  * @param user Ethereum address of the user who placed the order
+  * @param amount uint amount in terms of tokenGet that will be "buy" in the trade
+  */
+  function tradeBalances(address tokenGet, uint amountGet, address tokenGive, uint amountGive, address user, uint amount) private {
+    
+    uint feeTakeXfer = 0;
+    
+    if (now >= freeUntilDate) {
+      feeTakeXfer = amount.mul(feeTake).div(1 ether);
+    }
+    
+    tokens[tokenGet][msg.sender] = tokens[tokenGet][msg.sender].sub(amount.add(feeTakeXfer));
+    tokens[tokenGet][user] = tokens[tokenGet][user].add(amount);
+    tokens[tokenGet][feeAccount] = tokens[tokenGet][feeAccount].add(feeTakeXfer);
+    tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
+    tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
 
   /**
@@ -346,4 +395,74 @@ contract ForkDelta {
     tokens[tokenGive][user] = tokens[tokenGive][user].sub(amountGive.mul(amount).div(amountGet));
     tokens[tokenGive][msg.sender] = tokens[tokenGive][msg.sender].add(amountGive.mul(amount).div(amountGet));
   }
+  
+  ////////////////////////////////////////////////////////////////////////////////
+  // Contract Versioning / Migration
+  ////////////////////////////////////////////////////////////////////////////////
+  
+  /**
+  * User triggered function to migrate funds into a new contract to ease updates.
+  * Emits a FundsMigrated event.
+  * @param address Contract address of the new contract we are migrating funds to
+  * @param address[] Array of token addresses that we will be migrating to the new contract
+  */
+  function migrateFunds(address newContract, address[] tokens_) public {
+  
+    require(newContract != address(0));
+    
+    ForkDelta newExchange = ForkDelta(newContract);
+
+    // Move Ether into new exchange.
+    uint etherAmount = tokens[0][msg.sender];
+    if (etherAmount > 0) {
+      tokens[0][msg.sender] = 0;
+      newExchange.depositForUser.value(etherAmount)(msg.sender);
+    }
+
+    // Move Tokens into new exchange.
+    for (uint16 n = 0; n < tokens_.length; n++) {
+      address token = tokens_[n];
+      require(token != address(0)); // Ether is handled above.
+      uint tokenAmount = tokens[token][msg.sender];
+      
+      if (tokenAmount != 0) {      
+      	require(Token(token).approve(newExchange, tokenAmount));
+      	tokens[token][msg.sender] = 0;
+      	newExchange.depositTokenForUser(token, tokenAmount, msg.sender);
+      }
+    }
+
+    emit FundsMigrated(msg.sender, newContract);
+  }
+  
+  /**
+  * This function handles deposits of Ether into the contract, but allows specification of a user.
+  * Note: This is generally used in migration of funds.
+  * Note: With the payable modifier, this function accepts Ether.
+  */
+  function depositForUser(address user) public payable {
+    require(user != address(0));
+    require(msg.value > 0);
+    tokens[0][user] = tokens[0][user].add(msg.value);
+  }
+  
+  /**
+  * This function handles deposits of Ethereum based tokens into the contract, but allows specification of a user.
+  * Does not allow Ether.
+  * If token transfer fails, transaction is reverted and remaining gas is refunded.
+  * Note: This is generally used in migration of funds.
+  * Note: Remember to call Token(address).approve(this, amount) or this contract will not be able to do the transfer on your behalf.
+  * @param token Ethereum contract address of the token
+  * @param amount uint of the amount of the token the user wishes to deposit
+  */
+  function depositTokenForUser(address token, uint amount, address user) public {
+    require(token != address(0));
+    require(user != address(0));
+    require(amount > 0);
+    depositingTokenFlag = true;
+    require(Token(token).transferFrom(msg.sender, this, amount));
+    depositingTokenFlag = false;
+    tokens[token][user] = tokens[token][user].add(amount);
+  }
+  
 }

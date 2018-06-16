@@ -1,0 +1,16 @@
+{
+  "name": "forkdelta_smart_contract",
+  "version": "0.0.1",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forkdelta/smart_contract"
+  },
+  "dependencies": {
+    "erc20-tokens": "git+https://github.com/ConsenSys/Tokens.git",
+    "truffle": "^4.1.11"
+  },
+  "scripts": {
+    "postinstall": "cd node_modules/erc20-tokens/ && npm run compile"
+  }
+}
